@@ -122,46 +122,49 @@ export default function Home() {
 
       {/* Main content */}
       <div className="flex-1 flex flex-col min-w-0">
-        {/* Header */}
-        <div className="bg-gradient-ocean px-4 py-3 shadow-elegant">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <Button
-                variant="ghost"
-                size="sm"
-                className="lg:hidden text-white hover:bg-white/10"
-                onClick={() => setSidebarOpen(true)}
-              >
-                <Menu className="h-5 w-5" />
-              </Button>
-              <div className="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center">
-                <Globe className="text-white h-4 w-4" />
+        {/* Sticky Header + Status Bar */}
+        <div className="sticky top-0 z-10">
+          {/* Header */}
+          <div className="bg-gradient-ocean px-4 py-3 shadow-elegant">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="lg:hidden text-white hover:bg-white/10"
+                  onClick={() => setSidebarOpen(true)}
+                >
+                  <Menu className="h-5 w-5" />
+                </Button>
+                <div className="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center">
+                  <Globe className="text-white h-4 w-4" />
+                </div>
+                <div>
+                  <h1 className="text-lg font-semibold text-white">TravelAI</h1>
+                  <p className="text-xs text-white/80">AI Travel Assistant</p>
+                </div>
               </div>
-              <div>
-                <h1 className="text-lg font-semibold text-white">TravelAI</h1>
-                <p className="text-xs text-white/80">AI Travel Assistant</p>
+              <div className="flex items-center gap-2">
+                <div className="hidden sm:flex items-center gap-2 text-white/90">
+                  <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse-soft"></div>
+                  <span className="text-xs">Online</span>
+                </div>
+                <Button variant="ghost" size="sm" className="text-white/80 hover:text-white">
+                  <Settings className="h-4 w-4" />
+                </Button>
               </div>
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="hidden sm:flex items-center gap-2 text-white/90">
-                <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse-soft"></div>
-                <span className="text-xs">Online</span>
-              </div>
-              <Button variant="ghost" size="sm" className="text-white/80 hover:text-white">
-                <Settings className="h-4 w-4" />
-              </Button>
             </div>
           </div>
-        </div>
 
-        {/* Status bar */}
-        <div className="bg-blue-50 px-4 py-2 border-b border-blue-100">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse-soft"></div>
-              <span className="text-xs text-gray-600">Connected to travel booking APIs • Ready to help plan your journey</span>
+          {/* Status bar */}
+          <div className="bg-blue-50 px-4 py-2 border-b border-blue-100">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse-soft"></div>
+                <span className="text-xs text-gray-600">Connected to travel booking APIs • Ready to help plan your journey</span>
+              </div>
+              <span className="text-xs text-gray-500">GPT-4 Enhanced</span>
             </div>
-            <span className="text-xs text-gray-500">GPT-4 Enhanced</span>
           </div>
         </div>
 

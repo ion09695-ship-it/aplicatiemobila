@@ -63,6 +63,7 @@ Preferred communication style: Simple, everyday language.
 - **Responsive Design**: Mobile-first approach with responsive breakpoints
 - **Interactive Elements**: Quick action buttons for common travel queries
 - **Loading States**: Skeleton loaders and typing indicators for better UX
+- **Sticky Navigation**: Header and status bar remain visible during scroll for easy access to menu and controls
 
 ## Data Flow
 
