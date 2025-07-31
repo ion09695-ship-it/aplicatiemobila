@@ -37,13 +37,20 @@ Preferred communication style: Simple, everyday language.
 - **Session Management**: Users can create multiple chat sessions with persistent message history
 - **Message Types**: Support for both user messages and AI responses with metadata
 - **Real-time UI**: Typing indicators and smooth message animations
-- **Sidebar Navigation**: Session list with date-based grouping (today, yesterday, this week, older)
+- **Enhanced Sidebar Navigation**: Intelligent date-based grouping with multiple time periods:
+  - Today (with time stamps)
+  - Yesterday (with dates)
+  - This Week (with dates)
+  - This Month (with dates)
+  - Older conversations grouped by month/year
+  - Session count indicators for each time period
 
 ### AI Integration
-- **OpenAI GPT-4o**: Primary AI model for travel assistance
-- **Contextual Responses**: Maintains chat history for context-aware conversations
-- **Travel Query Extraction**: AI can identify when users need travel searches and extract relevant parameters
-- **Structured Responses**: AI responses include both conversational text and structured travel data
+- **Intelligent Fallback System**: Smart travel assistant that works without requiring external API keys
+- **Destination Recognition**: Recognizes 100+ global destinations and provides context-specific advice
+- **Intent Detection**: Automatically detects travel intent (hotels, flights, activities) and provides tailored responses
+- **Contextual Travel Responses**: Provides intelligent suggestions for hotels, flights, activities, and general travel planning
+- **OpenAI Integration Ready**: Can seamlessly upgrade to GPT-4o when API key is provided
 
 ### Travel Search System
 - **Multi-type Search**: Support for hotels, flights, and activities
