@@ -100,7 +100,7 @@ export default function Home() {
   return (
     <div className="min-h-screen flex bg-background">
       {/* Sidebar */}
-      <div className={`fixed lg:relative z-30 h-screen transition-all duration-300 ${
+      <div className={`fixed lg:sticky lg:top-0 z-30 h-screen transition-all duration-300 ${
         sidebarOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
       }`}>
         <ChatSidebar

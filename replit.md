@@ -64,6 +64,7 @@ Preferred communication style: Simple, everyday language.
 - **Interactive Elements**: Quick action buttons for common travel queries
 - **Loading States**: Skeleton loaders and typing indicators for better UX
 - **Sticky Navigation**: Header and status bar remain visible during scroll for easy access to menu and controls
+- **Responsive Sidebar**: Sticky positioning on desktop for easy access, mobile-optimized slide-out overlay on smaller screens
 
 ## Data Flow
 
