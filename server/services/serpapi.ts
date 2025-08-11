@@ -1,7 +1,26 @@
-import GoogleSearchResults from 'google-search-results-nodejs';
-const getJson = GoogleSearchResults.getJson;
-
 const SERPAPI_KEY = process.env.SERPAPI_KEY;
+
+// Simple fetch-based SerpAPI implementation
+async function serpApiRequest(params: Record<string, any>): Promise<any> {
+  if (!SERPAPI_KEY) {
+    throw new Error('SerpAPI key is required');
+  }
+
+  const url = new URL('https://serpapi.com/search');
+  Object.entries(params).forEach(([key, value]) => {
+    if (value !== undefined && value !== null) {
+      url.searchParams.append(key, String(value));
+    }
+  });
+  url.searchParams.append('api_key', SERPAPI_KEY);
+
+  const response = await fetch(url.toString());
+  if (!response.ok) {
+    throw new Error(`SerpAPI request failed: ${response.status} ${response.statusText}`);
+  }
+
+  return await response.json();
+}
 
 export interface SerpApiSearchResult {
   title: string;
@@ -50,7 +69,7 @@ export class SerpApiService {
         device: options.device || 'desktop'
       };
 
-      const results = await getJson(searchParams);
+      const results = await serpApiRequest(searchParams);
       
       const organicResults: SerpApiSearchResult[] = (results.organic_results || [])
         .slice(0, options.num || 8)
@@ -100,7 +119,7 @@ export class SerpApiService {
         num: options.num || 6
       };
 
-      const results = await getJson(searchParams);
+      const results = await serpApiRequest(searchParams);
       
       const organicResults: SerpApiSearchResult[] = (results.news_results || [])
         .slice(0, options.num || 6)
@@ -141,7 +160,7 @@ export class SerpApiService {
         num: options.num || 6
       };
 
-      const results = await getJson(searchParams);
+      const results = await serpApiRequest(searchParams);
       
       const organicResults: SerpApiSearchResult[] = (results.images_results || [])
         .slice(0, options.num || 6)
