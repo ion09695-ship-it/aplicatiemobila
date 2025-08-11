@@ -117,32 +117,32 @@ function generateHotelResponse(destination: string | null, message: string): Tra
   } : undefined;
   
   return {
-    message: `Great! I'll help you find the perfect accommodation${destText}. Here are some excellent options I found:
+    message: `### 🏨 Hotel Search${destText}
 
-🏨 **Hotel Recommendations${destText}:**
+I'd love to help you find the perfect accommodation${destText}! Here's what I can offer:
 
-**Luxury Options:**
+#### **Luxury Options**
 - Premium hotels with world-class amenities
-- 5-star service and prime locations
+- 5-star service and prime locations  
 - Spa, fine dining, and concierge services
 
-**Mid-Range Choices:**
+#### **Mid-Range Choices**
 - Comfortable hotels with great value
-- Modern amenities and convenient locations  
+- Modern amenities and convenient locations
 - Perfect balance of quality and price
 
-**Budget-Friendly:**
+#### **Budget-Friendly**
 - Clean, safe, and affordable options
 - Essential amenities for comfortable stays
 - Great for budget-conscious travelers
 
-To get more specific recommendations, please let me know:
-- Your travel dates
-- Number of guests
-- Preferred budget range
-- Any special requirements (location, amenities, etc.)
+#### **What I Need to Help You Better:**
+- **Travel dates** - When are you planning to visit?
+- **Number of guests** - How many people will be staying?
+- **Budget range** - What's your preferred price range?
+- **Special requirements** - Any specific location or amenity preferences?
 
-I'll provide personalized hotel suggestions with booking links!`,
+Once I have these details, I'll provide personalized hotel recommendations with current prices and booking options!`,
     shouldSearchTravel: true,
     travelQuery
   };
@@ -382,6 +382,13 @@ Your capabilities:
 
 Always provide helpful, personalized responses based on the user's needs. When you have search results, incorporate that real-time information naturally into your response. Be conversational and focus on practical advice.
 
+Format your responses using markdown for better readability:
+- Use **bold** for important points
+- Use ### for section headings  
+- Use bullet points for lists
+- Include relevant emojis sparingly to make responses more engaging
+- Structure information clearly with sections when appropriate
+
 ${searchContext}`;
 
       const messages: Array<{ role: "system" | "user" | "assistant"; content: string }> = [
@@ -402,12 +409,15 @@ ${searchContext}`;
 
       const aiMessage = response.choices[0].message.content || "I'm sorry, I couldn't process your request. Please try again.";
       
-      // Add search results links at the end if we have them
+      // Add search results in a more organized format
       let enhancedMessage = aiMessage;
       if (searchResults && searchResults.organicResults.length > 0) {
-        enhancedMessage += `\n\n🔍 **Additional Resources:**\n`;
+        enhancedMessage += `\n\n---\n\n### 🔍 Additional Resources\n\n`;
         searchResults.organicResults.slice(0, 3).forEach((result, i) => {
-          enhancedMessage += `${i + 1}. [${result.title}](${result.link})\n`;
+          enhancedMessage += `**${i + 1}. [${result.title}](${result.link})**\n`;
+          if (result.snippet) {
+            enhancedMessage += `${result.snippet.substring(0, 120)}...\n\n`;
+          }
         });
       }
 
@@ -428,12 +438,15 @@ ${searchContext}`;
     const fallbackResponse = generateFallbackTravelResponse(userMessage);
     let enhancedMessage = fallbackResponse.message;
     
-    enhancedMessage += `\n\n📊 **Current Information:**\n${searchResults.summary}\n`;
+    enhancedMessage += `\n\n---\n\n### 📊 Current Information\n\n${searchResults.summary}\n`;
     
     if (searchResults.organicResults.length > 0) {
-      enhancedMessage += `\n🔍 **Helpful Resources:**\n`;
+      enhancedMessage += `\n### 🔍 Helpful Resources\n\n`;
       searchResults.organicResults.slice(0, 4).forEach((result, i) => {
-        enhancedMessage += `${i + 1}. [${result.title}](${result.link}) - ${result.snippet.substring(0, 100)}...\n`;
+        enhancedMessage += `**${i + 1}. [${result.title}](${result.link})**\n`;
+        if (result.snippet) {
+          enhancedMessage += `${result.snippet.substring(0, 120)}...\n\n`;
+        }
       });
     }
 
