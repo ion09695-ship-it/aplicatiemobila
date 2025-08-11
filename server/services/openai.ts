@@ -1,4 +1,5 @@
 import OpenAI from "openai";
+import { serpApiService, type SerpApiResponse } from "./serpapi";
 
 // the newest OpenAI model is "gpt-4o" which was released May 13, 2024. do not change this unless explicitly requested by the user
 const apiKey = process.env.OPENAI_API_KEY;
@@ -6,13 +7,15 @@ const openai = apiKey ? new OpenAI({ apiKey }) : null;
 
 export interface TravelAssistantResponse {
   message: string;
-  searchParams?: {
+  shouldSearchTravel?: boolean;
+  travelQuery?: {
     destination: string;
     type: 'hotels' | 'flights' | 'activities' | 'mixed';
     dates?: string;
     guests?: string;
     budget?: string;
   };
+  searchResults?: SerpApiResponse;
 }
 
 // Helper functions for destination extraction and response generation
@@ -105,7 +108,7 @@ function extractBudget(message: string): string | undefined {
 
 function generateHotelResponse(destination: string | null, message: string): TravelAssistantResponse {
   const destText = destination ? ` in ${destination}` : '';
-  const searchParams = destination ? {
+  const travelQuery = destination ? {
     destination,
     type: 'hotels' as const,
     dates: extractDates(message),
@@ -140,13 +143,14 @@ To get more specific recommendations, please let me know:
 - Any special requirements (location, amenities, etc.)
 
 I'll provide personalized hotel suggestions with booking links!`,
-    searchParams
+    shouldSearchTravel: true,
+    travelQuery
   };
 }
 
 function generateFlightResponse(destination: string | null, message: string): TravelAssistantResponse {
   const destText = destination ? ` to ${destination}` : '';
-  const searchParams = destination ? {
+  const travelQuery = destination ? {
     destination,
     type: 'flights' as const,
     dates: extractDates(message),
@@ -183,13 +187,14 @@ To find your perfect flight, I need:
 - Preferred budget or class (economy/business)
 
 I'll search across multiple airlines to find you the best deals!`,
-    searchParams
+    shouldSearchTravel: true,
+    travelQuery
   };
 }
 
 function generateActivityResponse(destination: string | null, message: string): TravelAssistantResponse {
   const destText = destination ? ` in ${destination}` : '';
-  const searchParams = destination ? {
+  const travelQuery = destination ? {
     destination,
     type: 'activities' as const,
     dates: extractDates(message),
@@ -229,7 +234,8 @@ Let me know more about your preferences:
 - Adventure level (relaxed, moderate, extreme)?
 
 I'll create a personalized itinerary with the best activities for your trip!`,
-    searchParams
+    shouldSearchTravel: true,
+    travelQuery
   };
 }
 
@@ -259,7 +265,8 @@ To create your perfect ${destination} experience, tell me:
 - What interests you most? (culture, food, nature, nightlife, etc.)
 
 I'll create a customized travel plan just for you!`,
-    searchParams: {
+    shouldSearchTravel: true,
+    travelQuery: {
       destination,
       type: 'mixed' as const,
       dates: extractDates(message),
@@ -325,48 +332,161 @@ function generateFallbackTitle(message: string): string {
 }
 
 export async function generateTravelResponse(userMessage: string, chatHistory: string[]): Promise<TravelAssistantResponse> {
-  // If OpenAI is not available, provide intelligent fallback responses
-  if (!openai) {
-    return generateFallbackTravelResponse(userMessage);
+  // Always try to get search results from SerpAPI first for enhanced responses
+  let searchResults: SerpApiResponse | undefined;
+  
+  try {
+    // Use SerpAPI to get real-time information about the user's query
+    const searchOptions = {
+      location: extractDestination(userMessage) || undefined,
+      includeNews: shouldIncludeNews(userMessage),
+      includeImages: shouldIncludeImages(userMessage)
+    };
+    
+    const enhancedResults = await serpApiService.searchWithTravelContext(userMessage, searchOptions);
+    searchResults = enhancedResults.webResults;
+    
+    // Add news and images if relevant
+    if (enhancedResults.newsResults) {
+      searchResults.organicResults = [
+        ...searchResults.organicResults,
+        ...enhancedResults.newsResults.organicResults.map(r => ({ ...r, title: `📰 ${r.title}` }))
+      ];
+    }
+    
+    if (enhancedResults.imageResults) {
+      searchResults.organicResults = [
+        ...searchResults.organicResults,
+        ...enhancedResults.imageResults.organicResults.slice(0, 2).map(r => ({ ...r, title: `🖼️ ${r.title}` }))
+      ];
+    }
+  } catch (searchError) {
+    console.error("SerpAPI search error:", searchError);
+    // Continue without search results if SerpAPI fails
   }
 
-  try {
-    const systemPrompt = `You are TravelAI, an expert travel assistant that helps users plan amazing trips. You have access to real-time travel booking APIs for hotels, flights, and activities.
+  // If OpenAI is available, enhance the response with search data
+  if (openai) {
+    try {
+      const searchContext = searchResults ? 
+        `\n\nReal-time search results for context:\n${searchResults.summary}\n\nTop results:\n${searchResults.organicResults.slice(0, 3).map(r => `- ${r.title}: ${r.snippet}`).join('\n')}` : '';
+
+      const systemPrompt = `You are TravelAI, an expert travel assistant with access to real-time information through web search. You help users plan amazing trips with current, accurate data.
 
 Your capabilities:
-- Search and recommend hotels with real pricing and availability
-- Find flights with current schedules and fares  
-- Suggest activities and attractions
-- Create detailed itineraries
-- Provide weather information
-- Offer travel tips and advice
+- Access to real-time travel information and prices
+- Current weather, events, and local conditions
+- Up-to-date restaurant, hotel, and activity recommendations
+- Real flight schedules and booking information
+- Local tips and insider knowledge
 
-When users ask about specific travel needs (hotels, flights, activities), respond with helpful information and indicate if you should search for real options.
+Always provide helpful, personalized responses based on the user's needs. When you have search results, incorporate that real-time information naturally into your response. Be conversational and focus on practical advice.
 
-Be friendly, knowledgeable, and focus on providing personalized recommendations based on user preferences.`;
+${searchContext}`;
 
-    const messages: Array<{ role: "system" | "user" | "assistant"; content: string }> = [
-      { role: "system", content: systemPrompt },
-      ...chatHistory.slice(-6).map((msg, i) => ({
-        role: i % 2 === 0 ? "user" as const : "assistant" as const,
-        content: msg
-      })),
-      { role: "user", content: userMessage }
-    ];
+      const messages: Array<{ role: "system" | "user" | "assistant"; content: string }> = [
+        { role: "system", content: systemPrompt },
+        ...chatHistory.slice(-6).map((msg, i) => ({
+          role: i % 2 === 0 ? "user" as const : "assistant" as const,
+          content: msg
+        })),
+        { role: "user", content: userMessage }
+      ];
 
-    const response = await openai.chat.completions.create({
-      model: "gpt-4o",
-      messages,
-      temperature: 0.7,
-    });
+      const response = await openai.chat.completions.create({
+        model: "gpt-4o",
+        messages,
+        temperature: 0.7,
+        max_tokens: 1000,
+      });
+
+      const aiMessage = response.choices[0].message.content || "I'm sorry, I couldn't process your request. Please try again.";
+      
+      // Add search results links at the end if we have them
+      let enhancedMessage = aiMessage;
+      if (searchResults && searchResults.organicResults.length > 0) {
+        enhancedMessage += `\n\n🔍 **Additional Resources:**\n`;
+        searchResults.organicResults.slice(0, 3).forEach((result, i) => {
+          enhancedMessage += `${i + 1}. [${result.title}](${result.link})\n`;
+        });
+      }
+
+      return {
+        message: enhancedMessage,
+        searchResults,
+        shouldSearchTravel: shouldSearchForTravel(userMessage),
+        travelQuery: shouldSearchForTravel(userMessage) ? extractTravelQuery(userMessage) : undefined
+      };
+    } catch (error) {
+      console.error("OpenAI API error:", error);
+      // Fall back to enhanced response with just search results
+    }
+  }
+
+  // Enhanced fallback response using search results
+  if (searchResults) {
+    const fallbackResponse = generateFallbackTravelResponse(userMessage);
+    let enhancedMessage = fallbackResponse.message;
+    
+    enhancedMessage += `\n\n📊 **Current Information:**\n${searchResults.summary}\n`;
+    
+    if (searchResults.organicResults.length > 0) {
+      enhancedMessage += `\n🔍 **Helpful Resources:**\n`;
+      searchResults.organicResults.slice(0, 4).forEach((result, i) => {
+        enhancedMessage += `${i + 1}. [${result.title}](${result.link}) - ${result.snippet.substring(0, 100)}...\n`;
+      });
+    }
 
     return {
-      message: response.choices[0].message.content || "I'm sorry, I couldn't process your request. Please try again."
+      message: enhancedMessage,
+      searchResults,
+      shouldSearchTravel: shouldSearchForTravel(userMessage),
+      travelQuery: shouldSearchForTravel(userMessage) ? extractTravelQuery(userMessage) : undefined
     };
-  } catch (error) {
-    console.error("OpenAI API error:", error);
-    return generateFallbackTravelResponse(userMessage);
   }
+
+  // Final fallback without search results
+  return generateFallbackTravelResponse(userMessage);
+}
+
+// Helper functions for search enhancement
+function shouldIncludeNews(message: string): boolean {
+  const newsKeywords = ['news', 'current', 'latest', 'recent', 'events', 'what\'s happening', 'updates'];
+  return newsKeywords.some(keyword => message.toLowerCase().includes(keyword));
+}
+
+function shouldIncludeImages(message: string): boolean {
+  const imageKeywords = ['photos', 'pictures', 'images', 'looks like', 'show me', 'see'];
+  return imageKeywords.some(keyword => message.toLowerCase().includes(keyword));
+}
+
+function shouldSearchForTravel(message: string): boolean {
+  const travelSearchKeywords = ['hotel', 'flight', 'book', 'reserve', 'availability', 'prices', 'cost'];
+  return travelSearchKeywords.some(keyword => message.toLowerCase().includes(keyword));
+}
+
+function extractTravelQuery(message: string): {
+  destination: string;
+  type: 'hotels' | 'flights' | 'activities' | 'mixed';
+  dates?: string;
+  guests?: string;
+  budget?: string;
+} | undefined {
+  const destination = extractDestination(message);
+  if (!destination) return undefined;
+
+  let type: 'hotels' | 'flights' | 'activities' | 'mixed' = 'mixed';
+  if (message.includes('hotel') || message.includes('accommodation')) type = 'hotels';
+  else if (message.includes('flight') || message.includes('fly')) type = 'flights';
+  else if (message.includes('activity') || message.includes('things to do')) type = 'activities';
+
+  return {
+    destination,
+    type,
+    dates: extractDates(message),
+    guests: extractGuests(message),
+    budget: extractBudget(message)
+  };
 }
 
 export async function generateChatTitle(firstMessage: string): Promise<string> {
